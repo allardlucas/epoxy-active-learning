@@ -66,3 +66,13 @@ th { color: var(--ink-2); font-weight: 600; }
 
 .steps { margin: 4px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.45; color: var(--ink-2); }
 .steps b { color: var(--navy); }
+
+.help { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; margin-left: 6px;
+  border-radius: 50%; background: var(--navy); color: var(--cream); font-size: 12px; font-weight: 600; cursor: help; vertical-align: middle; flex: none; }
+.help-pop { display: none; position: absolute; left: 26px; top: 50%; transform: translateY(-50%); z-index: 20; width: 300px;
+  background: var(--navy); color: #dce3ee; font-size: 13px; font-weight: 400; line-height: 1.45; text-align: left;
+  padding: 12px 14px; border-radius: 10px; box-shadow: 0 8px 24px rgba(20, 33, 61, .25); }
+.help-pop b { color: var(--amber); }
+.help:hover .help-pop, .help:focus .help-pop, .help:focus-within .help-pop { display: block; }
+@media (max-width: 900px) { .help-pop { left: auto; right: -8px; top: 26px; transform: none; width: 260px; } }
+.lab { display: inline-flex; align-items: center; gap: 0; }

@@ -49,6 +49,16 @@ function useApi(url) {
 
 const Loading = ({ error }) => <div className="loading">{error ? `Erreur : ${error}` : "Calcul en cours…"}</div>;
 
+// Small "?" badge with an explanation shown on hover or keyboard focus
+function Help({ children }) {
+  return (
+    <span className="help" tabIndex={0} aria-label="Aide">
+      ?
+      <span className="help-pop" role="tooltip">{children}</span>
+    </span>
+  );
+}
+
 function Seg({ options, value, onChange }) {
   return (
     <div className="seg">
@@ -390,15 +400,15 @@ function Simulator() {
         </div>
         <div className="card controls">
           <h3>Réglages</h3>
-          <label>Faux labo construit avec…</label>
+          <label><span className="lab">Faux labo construit avec… <Help>Le modèle qui joue le rôle de la réalité : il donne la « vraie » résistance de chaque recette. « 51 mesures » : entraîné sur tous les essais du papier. « 32 essais initiaux » : sans l’active learning ni le record, pour que le faux labo ne connaisse pas déjà les bonnes réponses. Changer de faux labo vérifie que la conclusion ne dépend pas d’un seul modèle.</Help></span></label>
           <Seg options={ORACLE} value={oracle} onChange={setOracle} />
-          <label>Départ</label>
+          <label><span className="lab">Départ <Help><b>32 essais</b> : tout le plan d’expériences du papier (deux carrés gréco-latins 4 × 4), c’est-à-dire leur situation exacte avant l’active learning. Le plan couvre déjà bien l’espace : il reste peu à gagner.<br /><br /><b>10 essais</b> : 10 de ces 32 essais, choisis pour être les plus éloignés les uns des autres. On en sait moins au départ, la stratégie doit vraiment chercher : c’est là que la règle de choix compte le plus.<br /><br />Dans les deux cas, chaque stratégie ajoute ensuite 15 essais, en 3 lots de 5.</Help></span></label>
           <Seg options={{ 32: "32 essais (le plan du papier)", 10: "10 essais" }} value={nInit} onChange={(v) => setNInit(+v)} />
-          <label>Stratégie mise en avant</label>
+          <label><span className="lab">Stratégie mise en avant <Help>Les 6 stratégies tournent toujours. Celle-ci s’affiche en couleur à côté de la méthode du papier (en orange), et c’est son détail qui apparaît dans le tableau des 15 essais.</Help></span></label>
           <select value={strategy} onChange={(e) => setStrategy(e.target.value)}>
             {Object.entries(STRAT).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
-          <label>Tirage aléatoire (seed)
+          <label><span className="lab">Tirage aléatoire (seed) <Help>Fixe le hasard d’une campagne : le bruit de mesure (± 2 MPa par essai), le tirage au sort entre recettes à égalité et, avec 10 essais, lesquels des 32 servent de départ. Même numéro = même résultat. Une campagne seule peut avoir de la chance : c’est la moyenne sur 20 tirages, plus bas, qui compte.</Help></span>
             <input type="number" min={0} max={99} value={seed} onChange={(e) => setSeed(Math.max(0, Math.min(99, +e.target.value)))} />
           </label>
           <button className="go" disabled={busy} onClick={() => setSeed((seed + 1) % 100)}>{busy ? "Campagnes en cours…" : "Rejouer avec un autre tirage"}</button>
