@@ -1,5 +1,4 @@
 """FastAPI server: JSON endpoints for the explorer, and the built React app as static files."""
-import inspect
 import os
 from pathlib import Path
 
@@ -42,23 +41,6 @@ def simulate(oracle: str = "gp51", strategy: str = "greedy_xgb", n_init: int = 3
 @app.get("/api/benchmark")
 def bench():
     return analysis.benchmark_summary()
-
-
-# "Voir le code": source of the functions behind each tab
-CODE = {
-    "campaign": [analysis.campaign_data],
-    "loocv": [analysis.loocv_split],
-    "replay": [analysis.replay],
-    "simulate": [benchmark.Lab, benchmark.propose, benchmark.campaign_trace],
-}
-
-
-@app.get("/api/code/{tab}")
-def code(tab: str):
-    if tab not in CODE:
-        raise HTTPException(404)
-    return [dict(name=f.__qualname__, file=Path(inspect.getsourcefile(f)).name,
-                 source=inspect.getsource(f)) for f in CODE[tab]]
 
 
 WEB = Path(os.environ.get("WEB_DIST", Path(__file__).resolve().parents[1] / "web" / "dist"))

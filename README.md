@@ -48,7 +48,7 @@ docker run --rm -p 8000:8000 epoxy-explorer
 # then open http://localhost:8000
 ```
 
-Four tabs, one per question, each with a "see the code" drawer:
+Four tabs, one per question:
 
 1. **La campagne**: the 51 trials in order, recipe by recipe; none of the 15 active-learning proposals beats trial 17.
 2. **Le R²**: LOOCV R² on all points vs on the 32 DoE points, for XGBoost, Random Forest or ElasticNet, with the paper's hyperparameters or not.

@@ -64,8 +64,3 @@ th, td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--lin
 th:first-child, td:first-child { text-align: left; }
 th { color: var(--ink-2); font-weight: 600; }
 
-.code { margin: 0 32px 40px; max-width: 1436px; }
-@media (min-width: 1500px) { .code { margin: 0 auto 40px; } }
-.code summary { cursor: pointer; font-weight: 600; padding: 12px 0; }
-.code pre { background: var(--navy); color: #dce3ee; padding: 18px 20px; border-radius: 12px; overflow: auto; font-family: "IBM Plex Mono", monospace; font-size: 13px; line-height: 1.55; margin-bottom: 14px; }
-.code .fname { font-family: "IBM Plex Mono", monospace; font-size: 13px; color: var(--orange); margin: 6px 0; }

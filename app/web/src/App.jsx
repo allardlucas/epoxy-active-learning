@@ -417,22 +417,7 @@ function Simulator() {
   );
 }
 
-/* ------------------------------------------------------------------ code + shell */
-function Code({ tab }) {
-  const [d] = useApi(`/api/code/${tab}`);
-  return (
-    <details className="code">
-      <summary>Voir le code de cet onglet</summary>
-      {d?.map((f) => (
-        <div key={f.name}>
-          <p className="fname">{f.file} · {f.name}</p>
-          <pre>{f.source}</pre>
-        </div>
-      ))}
-    </details>
-  );
-}
-
+/* ------------------------------------------------------------------ shell */
 const TABS = [
   { id: "campaign", label: "La campagne", el: Campaign },
   { id: "loocv", label: "Le R²", el: R2 },
@@ -462,7 +447,6 @@ export default function App() {
         </nav>
       </header>
       <T.el key={tab} />
-      <Code tab={tab} />
     </>
   );
 }
