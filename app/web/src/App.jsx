@@ -346,23 +346,37 @@ function Takeaways({ scenarios, oracle, nInit, onPick }) {
         <p><b>Ce que change le départ.</b> Avec 32 essais, on est dans la situation exacte du papier : le plan couvre déjà bien l’espace et 15 essais de plus gagnent peu, parfois presque rien. Avec 10 essais, il reste plus à chercher, mais les stratégies à modèle restent proches entre elles.</p>
         <p className="bottom"><b>En une phrase :</b> sur ce problème, le bon plan d’expériences de départ fait l’essentiel. Avant d’attribuer un gain à l’active learning, il faut le comparer au hasard, et sur plusieurs faux labos.</p>
       </div>
+      <h3 className="tt">Les 8 scénarios en chiffres</h3>
+      <div className="howto">
+        <p><b>Tous les chiffres sont des écarts, en MPa, entre la meilleure colle trouvée et la meilleure colle possible</b> dans le faux labo. 0 veut dire qu’on a trouvé la meilleure recette. Plus c’est petit, mieux c’est. Chaque chiffre est une moyenne sur 20 campagnes.</p>
+        <dl>
+          <dt>Avant</dt><dd>l’écart avec les seuls essais de départ, avant toute stratégie.</dd>
+          <dt>Après 15 essais</dt><dd>l’écart une fois les 3 lots de 5 essais faits, en choisissant les recettes au hasard, avec la méthode du papier, ou avec la meilleure des 4 autres stratégies (nommée à côté).</dd>
+          <dt>Gagné en 15 essais</dt><dd>« avant » moins « après » : de combien les 15 essais ont rapproché de la meilleure recette, pour le papier puis pour le hasard.</dd>
+          <dt>Bat le papier ?</dt><dd>« oui » si la meilleure autre stratégie fait mieux que le papier de façon fiable sur les 20 campagnes (test de Wilcoxon apparié, seuil 5 %), avec l’écart en MPa. « non » si la différence peut venir du hasard.</dd>
+        </dl>
+        <p className="ex"><b>Exemple, 1re ligne :</b> avec le faux labo « GP · 32 essais » et les 32 essais du papier, la meilleure recette du départ est à 2,1 MPa de l’optimum. Après 15 essais, le hasard est encore à 1,9 MPa (il a gagné 0,2), le papier arrive à 0,7 MPa (il a gagné 1,4), et le GP moyenne descend à 0,1 MPa : il bat le papier de 0,56 MPa, et c’est fiable.</p>
+      </div>
       <div className="tscroll"><table className="scen">
-        <thead><tr><th>Faux labo</th><th>Départ<br /><span className="small">essais</span></th><th>Avant les<br />15 essais</th><th>Hasard</th><th>Papier</th><th>Gagné en 15 essais<br /><span className="small">papier · hasard</span></th><th>Meilleure autre</th><th>Bat le papier ?</th></tr></thead>
+        <thead>
+          <tr className="grp"><th colSpan={2}>Scénario</th><th>Avant</th><th colSpan={3}>Après 15 essais (écart à l’optimum)</th><th>Gagné en 15 essais</th><th></th></tr>
+          <tr><th>Faux labo</th><th>Départ</th><th>départ seul</th><th>Hasard</th><th>Papier</th><th>Meilleure autre</th><th>papier · hasard</th><th>Bat le papier ?</th></tr>
+        </thead>
         <tbody>{rows.map((r) => {
           const on = r.oracle === oracle && r.n_init === nInit;
           const d = r.gaps.greedy_xgb - r.gaps[r.best];
           const sig = r.p_best_vs_paper < 0.05;
           return (
             <tr key={`${r.oracle}-${r.n_init}`} className={on ? "on" : ""} onClick={() => onPick(r.oracle, r.n_init)} title="Afficher ce scénario">
-              <td>{ORACLE[r.oracle].replace("Random Forest", "Forêt aléatoire")}</td><td>{r.n_init}</td><td>{fmt(r.start_gap)}</td>
+              <td>{ORACLE[r.oracle].replace("Random Forest", "Forêt aléatoire")}</td><td>{r.n_init} essais</td><td>{fmt(r.start_gap)}</td>
               <td>{fmt(r.gaps.random)}</td><td className="paper">{fmt(r.gaps.greedy_xgb)}</td>
-              <td><b>{fmt(r.start_gap - r.gaps.greedy_xgb)}</b> <span className="small">· {fmt(r.start_gap - r.gaps.random)}</span></td>
               <td>{fmt(r.gaps[r.best])} <span className="small">{STRAT_SHORT[r.best]}</span></td>
+              <td><b>{fmt(r.start_gap - r.gaps.greedy_xgb)}</b> <span className="small">· {fmt(r.start_gap - r.gaps.random)}</span></td>
               <td className={sig ? "yes" : "no"}>{sig ? `oui, de ${fmt(d, 2)}` : "non"}</td>
             </tr>);
         })}</tbody>
       </table></div>
-      <p className="small">MPa sous l’optimum, 0 = meilleure recette trouvée. « Gagné en 15 essais » : écart avant moins écart après, pour le papier puis pour le hasard. « Bat le papier ? » : la meilleure autre stratégie fait-elle mieux que le papier (test de Wilcoxon apparié sur les 20 tirages, seuil 5 %) ? Si oui, de combien de MPa. Cliquez une ligne pour l’afficher plus bas.</p>
+      <p className="small">Cliquez une ligne pour afficher ce scénario dans les réglages et la campagne en exemple.</p>
       <p className="small">Limite : les faux labos sont construits à partir des 51 mesures. C’est une indication, pas une preuve.</p>
     </div>
   );
