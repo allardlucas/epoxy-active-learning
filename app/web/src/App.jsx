@@ -33,18 +33,6 @@ const baseLayout = (extra = {}) => ({
 });
 const cfg = { displayModeBar: false, responsive: true };
 
-// Static build (VITE_STATIC=1, e.g. Cloudflare Pages): every API answer was
-// precomputed by scripts/export_static.py into /data/<endpoint>/<params>.json.
-export const STATIC = import.meta.env.VITE_STATIC === "1";
-const STATIC_SEEDS = 30; // must match SEEDS in scripts/export_static.py
-export function apiUrl(url) {
-  if (!STATIC) return url;
-  const [path, query = ""] = url.split("?");
-  const name = path.replace(/^\/api\//, "");
-  const key = [...new URLSearchParams(query)].map(([k, v]) => `${k}-${v}`).sort().join("_") || "default";
-  return `/data/${name}/${key}.json`;
-}
-
 function useApi(url) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
@@ -52,7 +40,7 @@ function useApi(url) {
     if (!url) return;
     let alive = true;
     setError(null);
-    fetch(apiUrl(url)).then((r) => (r.ok ? r.json() : Promise.reject(r.statusText)))
+    fetch(url).then((r) => (r.ok ? r.json() : Promise.reject(r.statusText)))
       .then((d) => alive && setData(d)).catch((e) => alive && setError(String(e)));
     return () => { alive = false; };
   }, [url]);
@@ -344,7 +332,7 @@ function Simulator() {
     setBusy(true);
     const out = [];
     for (const s of strategies) {
-      const r = await fetch(apiUrl(`/api/simulate?oracle=${oracle}&strategy=${s}&n_init=${nInit}&seed=${seed}`)).then((x) => x.json());
+      const r = await fetch(`/api/simulate?oracle=${oracle}&strategy=${s}&n_init=${nInit}&seed=${seed}`).then((x) => x.json());
       out.push({ ...r, strategy: s, oracle, nInit, seed });
       setRuns((prev) => [{ ...r, strategy: s, oracle, nInit, seed }, ...prev.filter((p) => !(p.strategy === s && p.oracle === oracle && p.nInit === nInit && p.seed === seed))].slice(0, 6));
     }
@@ -373,8 +361,7 @@ function Simulator() {
             {Object.entries(STRAT).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
           <label>Tirage aléatoire (seed)
-            <input type="number" min={0} max={STATIC ? STATIC_SEEDS - 1 : 99} value={seed} onChange={(e) => setSeed(Math.max(0, Math.min(STATIC ? STATIC_SEEDS - 1 : 99, +e.target.value)))} />
-            {STATIC && <span className="muted small">Version en ligne : tirages 0 à {STATIC_SEEDS - 1}, calculés à l’avance.</span>}
+            <input type="number" min={0} max={99} value={seed} onChange={(e) => setSeed(+e.target.value)} />
           </label>
           <button className="go" disabled={busy} onClick={() => run([strategy])}>{busy ? "Campagne en cours…" : "Lancer la campagne"}</button>
           <button className="go" style={{ background: "#14213D" }} disabled={busy} onClick={() => run(Object.keys(STRAT))}>Comparer les 6 stratégies</button>

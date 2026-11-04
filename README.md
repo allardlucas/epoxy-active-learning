@@ -46,10 +46,7 @@ pytest -q
 
 ## Explorer app (one Docker image)
 
-**Online** (published automatically by the CI once tests and the Docker build pass):
-
-- Full app on a Hugging Face Space (free CPU, sleeps after 48 h without visits): `https://huggingface.co/spaces/<hf-user>/epoxy-explorer`
-- Static version on Cloudflare Pages, every API answer precomputed (simulator seeds 0 to 29): https://epoxy-explorer.pages.dev
+**Online**: the CI publishes the app to a Hugging Face Space (free CPU) once the tests and the Docker build pass: `https://huggingface.co/spaces/<hf-user>/epoxy-explorer`. The Space sleeps after 48 h without visits and takes about a minute to wake up.
 
 
 An interactive version of the analysis: a React front end over a small FastAPI server that calls the same code as `src/`.
