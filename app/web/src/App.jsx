@@ -363,6 +363,7 @@ function Takeaways({ scenarios, oracle, nInit, onPick }) {
         })}</tbody>
       </table></div>
       <p className="small">MPa sous l’optimum, 0 = meilleure recette trouvée. « Gagné en 15 essais » : écart avant moins écart après, pour le papier puis pour le hasard. « Bat le papier ? » : la meilleure autre stratégie fait-elle mieux que le papier (test de Wilcoxon apparié sur les 20 tirages, seuil 5 %) ? Si oui, de combien de MPa. Cliquez une ligne pour l’afficher plus bas.</p>
+      <p className="small">Limite : les faux labos sont construits à partir des 51 mesures. C’est une indication, pas une preuve.</p>
     </div>
   );
 }
@@ -409,9 +410,7 @@ function Simulator() {
   const gap = (r) => opt - r.best_so_far[r.best_so_far.length - 1];
   const benchRows = useMemo(() => (bench ? bench.rows.filter((r) => r.oracle === oracle && r.n_init === nInit) : []), [bench, oracle, nInit]);
   const benchGap = (s) => { const r = benchRows.find((x) => x.strategy === s); return r ? { gap: bench.optimum[oracle] - r.mean, ci: 1.96 * r.sem } : null; };
-  const order = Object.keys(STRAT).filter((s) => benchGap(s)).sort((x, y) => benchGap(x).gap - benchGap(y).gap);
   const paperGap = benchGap("greedy_xgb"), randomGap = benchGap("random");
-  const bestModel = order.find((s) => s !== "random");
   const scen = bench?.scenarios?.find((x) => x.oracle === oracle && x.n_init === nInit);
 
   // Staircase lines: the selected strategy and the paper in colour, the others in light grey
@@ -457,7 +456,7 @@ function Simulator() {
           <select value={strategy} onChange={(e) => setStrategy(e.target.value)}>
             {Object.entries(STRAT).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
-          <label><span className="lab">Tirage aléatoire (seed) <Help>Fixe le hasard d’une campagne : le bruit de mesure (± 2 MPa par essai), le tirage au sort entre recettes à égalité et, avec 10 essais, lesquels des 32 servent de départ. Même numéro = même résultat. Une campagne seule peut avoir de la chance : c’est la moyenne sur 20 tirages, plus bas, qui compte.</Help></span>
+          <label><span className="lab">Tirage aléatoire (seed) <Help>Fixe le hasard d’une campagne : le bruit de mesure (± 2 MPa par essai), le tirage au sort entre recettes à égalité et, avec 10 essais, lesquels des 32 servent de départ. Même numéro = même résultat. Une campagne seule peut avoir de la chance : c’est la moyenne sur 20 tirages, dans le tableau en haut et la carte « Ce scénario », qui compte.</Help></span>
             <input type="number" min={0} max={99} value={seed} onChange={(e) => setSeed(Math.max(0, Math.min(99, +e.target.value)))} />
           </label>
           <button className="go" disabled={busy} onClick={() => setSeed((seed + 1) % 100)}>{busy ? "Campagnes en cours…" : "Rejouer avec un autre tirage"}</button>
@@ -467,26 +466,17 @@ function Simulator() {
             <h3>Ce scénario, sur 20 campagnes <Help>Les 3 lots de 5 essais sont rejoués 20 fois, avec 20 tirages différents du bruit de mesure (et, avec 10 essais, du départ). Une seule campagne peut avoir de la chance ou pas : la moyenne de 20 dit ce qu’on peut attendre d’une stratégie. Tous les chiffres sont en MPa sous la meilleure recette possible, 0 = trouvée.</Help></h3>
             <div className="stat"><span className="num">{fmt(scen.start_gap)}</span><span>avant les 15 essais <Help>L’écart entre la meilleure recette du départ et la meilleure recette possible. C’est le point de départ commun à toutes les stratégies.</Help></span></div>
             <div className="stat"><span className="num">{fmt(paperGap.gap)}</span><span>après 15 essais, avec la méthode du papier <Help>La règle du papier : à chaque lot, tester les 5 recettes que XGBoost prédit les meilleures. La différence avec la ligne du dessus, c’est ce que les 15 essais ont fait gagner.</Help></span></div>
-            <div className="stat"><span className="num">{fmt(benchGap(bestModel).gap)}</span><span>avec la meilleure autre stratégie ({STRAT_SHORT[bestModel]}) <Help>La meilleure des 4 autres stratégies à modèle sur ce scénario. Si l’écart avec le papier est petit, ou pas significatif, changer de règle de choix n’aurait rien changé.</Help></span></div>
+            <div className="stat"><span className="num">{fmt(scen.gaps[scen.best])}</span><span>avec la meilleure autre stratégie ({STRAT_SHORT[scen.best]}) <Help>La meilleure des 4 autres stratégies à modèle sur ce scénario. Si l’écart avec le papier est petit, ou pas significatif, changer de règle de choix n’aurait rien changé.</Help></span></div>
             <div className="stat"><span className="num">{fmt(randomGap.gap)}</span><span>en choisissant au hasard <Help>15 recettes tirées au sort, sans modèle. C’est la référence : si une stratégie à modèle ne fait pas nettement mieux, le modèle n’apporte rien ici.</Help></span></div>
             <p className="small" style={{ marginTop: 8 }}>{scenText(scen)}</p>
           </div>
         )}
-        <div className="verdict">
-          <h3>À retenir</h3>
-          <ul className="retenir">
-            <li>Sauf sur un paysage lisse, les 15 essais rapportent peu (0 à 1,4 MPa), et le hasard en gagne autant : le plan de départ fait l’essentiel.</li>
-            <li>Un modèle ne bat le hasard que si le paysage est lisse (faux labo GP · 32 essais).</li>
-            <li>La règle de choix change moins de 1 MPa le plus souvent, et explorer (EI) n’apporte rien.</li>
-          </ul>
-          <p className="small" style={{ marginTop: 8, color: "#BFC8D8" }}>Limite : les faux labos sont construits à partir des 51 mesures. C’est une indication, pas une preuve.</p>
-        </div>
       </aside>
       <section className="main">
         {bench?.scenarios && <Takeaways scenarios={bench.scenarios} oracle={oracle} nInit={nInit} onPick={(o, n) => { setOracle(o); setNInit(n); }} />}
         <div className="panel">
-          <h2>Combien manque-t-il pour atteindre la meilleure recette ?</h2>
-          <p className="sub">Une campagne de 15 essais par stratégie, même départ et même tirage. Plus la marche descend, plus la stratégie s’approche de l’optimum ({opt ? `${fmt(opt)} MPa` : "…"}). En couleur : la méthode du papier et la stratégie choisie.</p>
+          <h2>Une campagne en exemple : combien manque-t-il pour atteindre la meilleure recette ?</h2>
+          <p className="sub">Une seule campagne de 15 essais par stratégie, même départ et même tirage. Cliquez « Rejouer avec un autre tirage » : le classement change d’une campagne à l’autre, d’où les moyennes sur 20 campagnes plus haut. Plus la marche descend, plus la stratégie s’approche de l’optimum ({opt ? `${fmt(opt)} MPa` : "…"}). En couleur : la méthode du papier et la stratégie choisie.</p>
           {!any ? <Loading /> : (
             <Plot config={cfg} useResizeHandler style={{ width: "100%", height: 360 }}
               data={lines}
@@ -502,29 +492,9 @@ function Simulator() {
               })} />
           )}
         </div>
-        {benchRows.length > 0 && (
-          <div className="panel">
-            <h2>Et en moyenne, sur 20 tirages ?</h2>
-            <p className="sub">Écart moyen à l’optimum après 15 essais, avec son intervalle de confiance à 95 %, pour ce faux labo et ce départ. Plus court = mieux.</p>
-            <Plot config={cfg} useResizeHandler style={{ width: "100%", height: 300 }}
-              data={[{
-                type: "bar", orientation: "h",
-                y: order.map((s) => STRAT[s]), x: order.map((s) => benchGap(s).gap),
-                error_x: { type: "data", array: order.map((s) => benchGap(s).ci), color: C.ink2, thickness: 1.5 },
-                marker: { color: order.map((s) => (s === strategy || s === "greedy_xgb" ? STRAT_COLOR[s] : "#C9CFD9")) },
-                textposition: "none",
-                hovertemplate: "%{y} : %{x:.2f} MPa sous l’optimum<extra></extra>",
-              }]}
-              layout={baseLayout({ margin: { l: 200, r: 24, t: 8, b: 44 }, showlegend: false,
-                yaxis: { autorange: "reversed" },
-                xaxis: { title: "MPa sous l’optimum", gridcolor: "#eee", range: [0, 1.18 * Math.max(...order.map((s) => benchGap(s).gap + benchGap(s).ci))] },
-                annotations: order.map((s) => ({ x: benchGap(s).gap + benchGap(s).ci, y: STRAT[s], xanchor: "left", xshift: 8, showarrow: false,
-                  text: `${fmt(benchGap(s).gap)} MPa`, font: { size: 12, color: s === strategy || s === "greedy_xgb" ? STRAT_COLOR[s] : C.ink2 } })) })} />
-          </div>
-        )}
         {sel && (
-          <div className="panel">
-            <h2>Le détail des 15 essais · {STRAT[strategy]}</h2>
+          <details className="panel fold">
+            <summary><h2>Voir les 15 essais · {STRAT[strategy]}</h2></summary>
             <p className="sub">« Mesuré » : ce que le faux labo renvoie, bruit compris. « Vrai » : la résistance réelle de la recette.</p>
             <table>
               <thead><tr><th>Lot</th><th>Résine</th><th>Durcisseur</th><th>r</th><th>T (°C)</th><th>Mesuré</th><th>Vrai</th></tr></thead>
@@ -532,7 +502,7 @@ function Simulator() {
                 <tr key={`${i}-${j}`}><td>{j === 0 ? `Lot ${i + 1}` : ""}</td><td>{p.MW_epoxy}</td><td>{p.MW_curing_agent}</td><td>{fmt(p.r, 2)}</td><td>{p.T_cure}</td><td>{fmt(p.measured)}</td><td><b>{fmt(p.true)}</b></td></tr>
               )))}</tbody>
             </table>
-          </div>
+          </details>
         )}
       </section>
     </div>
