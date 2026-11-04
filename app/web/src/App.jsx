@@ -319,36 +319,74 @@ function Replay() {
 }
 
 /* ------------------------------------------------------------------ 4. Simulator */
+const STRAT_SHORT = { random: "Hasard", greedy_xgb: "Papier", greedy_rf: "Top 5 RF", gp_mean: "GP moyenne", gp_ei: "GP + EI", gp_ucb: "GP + UCB" };
+
 function Simulator() {
   const [oracle, setOracle] = useState("gp32");
   const [strategy, setStrategy] = useState("greedy_xgb");
   const [nInit, setNInit] = useState(10);
   const [seed, setSeed] = useState(0);
-  const [runs, setRuns] = useState([]);
+  const [runs, setRuns] = useState({});
   const [busy, setBusy] = useState(false);
   const [bench] = useApi("/api/benchmark");
 
-  const run = async (strategies) => {
-    setBusy(true);
-    const out = [];
-    for (const s of strategies) {
-      const r = await fetch(`/api/simulate?oracle=${oracle}&strategy=${s}&n_init=${nInit}&seed=${seed}`).then((x) => x.json());
-      out.push({ ...r, strategy: s, oracle, nInit, seed });
-      setRuns((prev) => [{ ...r, strategy: s, oracle, nInit, seed }, ...prev.filter((p) => !(p.strategy === s && p.oracle === oracle && p.nInit === nInit && p.seed === seed))].slice(0, 6));
-    }
-    setBusy(false);
-  };
-  useEffect(() => { setRuns([]); }, [oracle, nInit, seed]);
-  const last = runs.find((r) => r.strategy === strategy) || runs[0];
+  // One campaign per strategy for the current settings, run as soon as they change
+  useEffect(() => {
+    let alive = true;
+    setRuns({}); setBusy(true);
+    (async () => {
+      for (const s of Object.keys(STRAT)) {
+        const r = await fetch(`/api/simulate?oracle=${oracle}&strategy=${s}&n_init=${nInit}&seed=${seed}`).then((x) => x.json());
+        if (!alive) return;
+        setRuns((prev) => ({ ...prev, [s]: r }));
+      }
+      if (alive) setBusy(false);
+    })();
+    return () => { alive = false; };
+  }, [oracle, nInit, seed]);
+
+  const any = Object.values(runs)[0];
+  const opt = any?.optimum.true;
+  const sel = runs[strategy];
+  const gap = (r) => opt - r.best_so_far[r.best_so_far.length - 1];
   const benchRows = useMemo(() => (bench ? bench.rows.filter((r) => r.oracle === oracle && r.n_init === nInit) : []), [bench, oracle, nInit]);
+  const benchGap = (s) => { const r = benchRows.find((x) => x.strategy === s); return r ? { gap: bench.optimum[oracle] - r.mean, ci: 1.96 * r.sem } : null; };
+  const order = Object.keys(STRAT).filter((s) => benchGap(s)).sort((x, y) => benchGap(x).gap - benchGap(y).gap);
+  const paperGap = benchGap("greedy_xgb"), randomGap = benchGap("random");
+  const bestModel = order.find((s) => s !== "random");
+
+  // Staircase lines: the selected strategy and the paper in colour, the others in light grey
+  const lines = Object.entries(runs).map(([s, r]) => {
+    const on = s === strategy || s === "greedy_xgb";
+    return {
+      x: [0, 5, 10, 15], y: r.best_so_far.map((b) => opt - b), name: STRAT[s], mode: "lines+markers",
+      line: { shape: "hv", color: on ? STRAT_COLOR[s] : "#C9CFD9", width: on ? 4 : 2 },
+      marker: { size: on ? 9 : 6, color: on ? STRAT_COLOR[s] : "#C9CFD9" },
+      hovertemplate: `${STRAT[s]}<br>après %{x} essais : %{y:.1f} MPa sous l’optimum<extra></extra>`,
+      showlegend: false,
+    };
+  }).sort((u, v) => (u.line.width - v.line.width));
+  const labels = Object.entries(runs).map(([s, r]) => ({ s, y: opt - r.best_so_far[3] }))
+    .sort((u, v) => u.y - v.y);
+  // spread end labels so they do not overlap
+  const ymax = Math.max(1, ...Object.values(runs).map((r) => opt - r.best_so_far[0]));
+  const minGap = ymax * 0.07;
+  labels.forEach((l, i) => { l.ly = i === 0 ? l.y : Math.max(l.y, labels[i - 1].ly + minGap); });
 
   return (
     <div className="page">
       <aside className="side">
         <div className="card">
           <h3>La question</h3>
-          <p className="question">Une autre stratégie aurait-elle mieux dépensé les 15 essais ?</p>
-          <p className="muted small" style={{ marginTop: 8 }}>On ne peut pas refaire la campagne au labo. On fabrique donc un <b>faux labo</b> : un modèle entraîné sur les vraies mesures donne la « vraie » résistance de chaque recette, plus 2 MPa de bruit à chaque essai.</p>
+          <p className="question">Avec les mêmes 15 essais, une autre façon de choisir les recettes aurait-elle trouvé une meilleure colle ?</p>
+        </div>
+        <div className="card">
+          <h3>Comment ça marche</h3>
+          <ol className="steps">
+            <li><b>Un faux labo.</b> On ne peut pas refaire les essais. Un modèle entraîné sur les vraies mesures donne donc la « vraie » résistance de chacune des 3 328 recettes, et chaque essai ajoute 2 MPa de bruit.</li>
+            <li><b>Le même départ pour tous.</b> Chaque stratégie part des mêmes essais, puis choisit 3 lots de 5 recettes, comme dans le papier.</li>
+            <li><b>On compare</b> l’écart entre la meilleure recette trouvée et la meilleure recette possible : <b>0 = trouvée</b>.</li>
+          </ol>
         </div>
         <div className="card controls">
           <h3>Réglages</h3>
@@ -356,60 +394,78 @@ function Simulator() {
           <Seg options={ORACLE} value={oracle} onChange={setOracle} />
           <label>Départ</label>
           <Seg options={{ 32: "32 essais (le plan du papier)", 10: "10 essais" }} value={nInit} onChange={(v) => setNInit(+v)} />
-          <label>Stratégie</label>
+          <label>Stratégie mise en avant</label>
           <select value={strategy} onChange={(e) => setStrategy(e.target.value)}>
             {Object.entries(STRAT).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
           <label>Tirage aléatoire (seed)
-            <input type="number" min={0} max={99} value={seed} onChange={(e) => setSeed(+e.target.value)} />
+            <input type="number" min={0} max={99} value={seed} onChange={(e) => setSeed(Math.max(0, Math.min(99, +e.target.value)))} />
           </label>
-          <button className="go" disabled={busy} onClick={() => run([strategy])}>{busy ? "Campagne en cours…" : "Lancer la campagne"}</button>
-          <button className="go" style={{ background: "#14213D" }} disabled={busy} onClick={() => run(Object.keys(STRAT))}>Comparer les 6 stratégies</button>
+          <button className="go" disabled={busy} onClick={() => setSeed((seed + 1) % 100)}>{busy ? "Campagnes en cours…" : "Rejouer avec un autre tirage"}</button>
         </div>
+        {paperGap && randomGap && (
+          <div className="card">
+            <h3>Sur 20 campagnes</h3>
+            <div className="stat"><span className="num">{fmt(paperGap.gap)}</span><span>MPa sous l’optimum pour la méthode du papier</span></div>
+            <div className="stat"><span className="num">{fmt(benchGap(bestModel).gap)}</span><span>MPa pour la meilleure stratégie à modèle ({STRAT_SHORT[bestModel]})</span></div>
+            <div className="stat"><span className="num">{fmt(randomGap.gap)}</span><span>MPa en choisissant au hasard</span></div>
+          </div>
+        )}
         <div className="verdict">
           <h3>Lecture</h3>
-          <p>Sur ce problème à 4 variables, avec un bon plan de départ, les stratégies se valent à 1 MPa près. Un GP sans incertitude fait aussi bien que la BO : ce qui aide, c’est un modèle lisse, pas l’exploration.</p>
-          <p className="small" style={{ marginTop: 8, color: "#BFC8D8" }}>Limite : les faux labos héritent des 51 mesures. C’est une indication, pas une preuve.</p>
+          <p>Toutes les stratégies qui utilisent un modèle finissent à moins de 1 MPa les unes des autres. Sur ce petit problème, c’est le bon plan de départ qui fait l’essentiel, pas la règle de choix.</p>
+          <p className="small" style={{ marginTop: 8, color: "#BFC8D8" }}>Limite : les faux labos sont construits à partir des 51 mesures. C’est une indication, pas une preuve.</p>
         </div>
       </aside>
       <section className="main">
         <div className="panel">
-          <h2>Meilleure vraie résistance trouvée</h2>
-          <p className="sub">{last ? `Optimum de ce faux labo : ${fmt(last.optimum.true)} MPa. Le tableau montre la stratégie choisie dans la liste.` : "Lancez une campagne pour voir les essais tomber, lot par lot. Avec 10 essais au départ, les écarts se voient mieux."}</p>
-          <Plot config={cfg} useResizeHandler style={{ width: "100%", height: 340 }}
-            data={[
-              ...runs.map((r) => ({ x: [0, 5, 10, 15], y: r.best_so_far, name: STRAT[r.strategy], mode: "lines+markers", line: { color: STRAT_COLOR[r.strategy], width: 3 }, marker: { size: 8 } })),
-              ...(last ? [{ x: [0, 15], y: [last.optimum.true, last.optimum.true], mode: "lines", name: "optimum du faux labo", line: { color: C.navy, dash: "dot" } }] : []),
-            ]}
-            layout={baseLayout({ xaxis: { title: "essais dépensés après le départ", tickvals: [0, 5, 10, 15] }, yaxis: { title: "MPa", gridcolor: "#eee" } })} />
+          <h2>Combien manque-t-il pour atteindre la meilleure recette ?</h2>
+          <p className="sub">Une campagne de 15 essais par stratégie, même départ et même tirage. Plus la marche descend, plus la stratégie s’approche de l’optimum ({opt ? `${fmt(opt)} MPa` : "…"}). En couleur : la méthode du papier et la stratégie choisie.</p>
+          {!any ? <Loading /> : (
+            <Plot config={cfg} useResizeHandler style={{ width: "100%", height: 360 }}
+              data={lines}
+              layout={baseLayout({
+                margin: { l: 64, r: 130, t: 16, b: 52 }, showlegend: false,
+                xaxis: { title: "essais dépensés après le départ", tickvals: [0, 5, 10, 15], ticktext: ["départ", "lot 1", "lot 2", "lot 3"], range: [-0.4, 15.4], zeroline: false },
+                yaxis: { title: "MPa sous l’optimum", range: [-0.06 * Math.max(ymax, labels[labels.length - 1]?.ly || 0), 1.08 * Math.max(ymax, labels[labels.length - 1]?.ly || 0)], gridcolor: "#eee", zeroline: true, zerolinecolor: C.navy, zerolinewidth: 1.5 },
+                annotations: [
+                  ...labels.map((l) => ({ x: 15, y: l.ly, xanchor: "left", xshift: 10, showarrow: false, text: STRAT_SHORT[l.s],
+                    font: { size: 12, color: l.s === strategy || l.s === "greedy_xgb" ? STRAT_COLOR[l.s] : "#9AA3B2" } })),
+                  { x: 0, y: 0, xanchor: "left", yanchor: "bottom", showarrow: false, text: "0 = meilleure recette trouvée", font: { size: 11, color: C.ink2 } },
+                ],
+              })} />
+          )}
         </div>
-        {last && (
+        {benchRows.length > 0 && (
           <div className="panel">
-            <h2>Les 15 essais choisis · {STRAT[last.strategy]}</h2>
+            <h2>Et en moyenne, sur 20 tirages ?</h2>
+            <p className="sub">Écart moyen à l’optimum après 15 essais, avec son intervalle de confiance à 95 %, pour ce faux labo et ce départ. Plus court = mieux.</p>
+            <Plot config={cfg} useResizeHandler style={{ width: "100%", height: 300 }}
+              data={[{
+                type: "bar", orientation: "h",
+                y: order.map((s) => STRAT[s]), x: order.map((s) => benchGap(s).gap),
+                error_x: { type: "data", array: order.map((s) => benchGap(s).ci), color: C.ink2, thickness: 1.5 },
+                marker: { color: order.map((s) => (s === strategy || s === "greedy_xgb" ? STRAT_COLOR[s] : "#C9CFD9")) },
+                textposition: "none",
+                hovertemplate: "%{y} : %{x:.2f} MPa sous l’optimum<extra></extra>",
+              }]}
+              layout={baseLayout({ margin: { l: 200, r: 24, t: 8, b: 44 }, showlegend: false,
+                yaxis: { autorange: "reversed" },
+                xaxis: { title: "MPa sous l’optimum", gridcolor: "#eee", range: [0, 1.18 * Math.max(...order.map((s) => benchGap(s).gap + benchGap(s).ci))] },
+                annotations: order.map((s) => ({ x: benchGap(s).gap + benchGap(s).ci, y: STRAT[s], xanchor: "left", xshift: 8, showarrow: false,
+                  text: `${fmt(benchGap(s).gap)} MPa`, font: { size: 12, color: s === strategy || s === "greedy_xgb" ? STRAT_COLOR[s] : C.ink2 } })) })} />
+          </div>
+        )}
+        {sel && (
+          <div className="panel">
+            <h2>Le détail des 15 essais · {STRAT[strategy]}</h2>
+            <p className="sub">« Mesuré » : ce que le faux labo renvoie, bruit compris. « Vrai » : la résistance réelle de la recette.</p>
             <table>
               <thead><tr><th>Lot</th><th>Résine</th><th>Durcisseur</th><th>r</th><th>T (°C)</th><th>Mesuré</th><th>Vrai</th></tr></thead>
-              <tbody>{last.batches.flatMap((b, i) => b.map((p, j) => (
+              <tbody>{sel.batches.flatMap((b, i) => b.map((p, j) => (
                 <tr key={`${i}-${j}`}><td>{j === 0 ? `Lot ${i + 1}` : ""}</td><td>{p.MW_epoxy}</td><td>{p.MW_curing_agent}</td><td>{fmt(p.r, 2)}</td><td>{p.T_cure}</td><td>{fmt(p.measured)}</td><td><b>{fmt(p.true)}</b></td></tr>
               )))}</tbody>
             </table>
-          </div>
-        )}
-        {benchRows.length > 0 && (
-          <div className="panel">
-            <h2>Sur 20 campagnes (calculé à l’avance)</h2>
-            <p className="sub">Moyenne et intervalle de confiance à 95 % de la meilleure vraie résistance après 15 essais, pour ce faux labo et ce départ. Pointillé : la meilleure recette possible.</p>
-            <Plot config={cfg} useResizeHandler style={{ width: "100%", height: 300 }}
-              data={[{
-                type: "scatter", mode: "markers", orientation: "h",
-                y: Object.keys(STRAT).map((s) => STRAT[s]),
-                x: Object.keys(STRAT).map((s) => benchRows.find((r) => r.strategy === s)?.mean),
-                error_x: { type: "data", array: Object.keys(STRAT).map((s) => 1.96 * (benchRows.find((r) => r.strategy === s)?.sem || 0)), color: C.ink2 },
-                marker: { size: 12, color: Object.keys(STRAT).map((s) => STRAT_COLOR[s]) }, hovertemplate: "%{y} : %{x:.1f} MPa<extra></extra>",
-              }]}
-              layout={baseLayout({ margin: { l: 200, r: 16, t: 24, b: 40 }, showlegend: false,
-                xaxis: { title: "MPa", gridcolor: "#eee", range: [Math.min(...benchRows.map((r) => r.mean)) - 1, bench.optimum[oracle] + 0.5] },
-                shapes: [{ type: "line", x0: bench.optimum[oracle], x1: bench.optimum[oracle], yref: "paper", y0: 0, y1: 1, line: { dash: "dot", color: C.navy } }],
-                annotations: [{ x: bench.optimum[oracle], yref: "paper", y: 1.02, yanchor: "bottom", text: "optimum", showarrow: false, font: { size: 12 } }] })} />
           </div>
         )}
       </section>

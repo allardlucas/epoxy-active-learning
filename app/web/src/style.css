@@ -64,3 +64,5 @@ th, td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--lin
 th:first-child, td:first-child { text-align: left; }
 th { color: var(--ink-2); font-weight: 600; }
 
+.steps { margin: 4px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; line-height: 1.45; color: var(--ink-2); }
+.steps b { color: var(--navy); }
