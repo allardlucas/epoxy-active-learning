@@ -329,6 +329,54 @@ function Replay() {
 
 /* ------------------------------------------------------------------ 4. Simulator */
 const STRAT_SHORT = { random: "Hasard", greedy_xgb: "Papier", greedy_rf: "Top 5 RF", gp_mean: "GP moyenne", gp_ei: "GP + EI", gp_ucb: "GP + UCB" };
+const ORACLE_SHORT = { gp32: "GP · 32 essais initiaux", gp51: "GP · 51 mesures", rf51: "Random Forest · 51 mesures", xgb51: "XGBoost · 51 mesures" };
+
+function Takeaways({ scenarios, oracle, nInit, onPick }) {
+  const rows = ["gp32", "gp51", "rf51", "xgb51"].flatMap((o) => [32, 10].map((n) => scenarios.find((s) => s.oracle === o && s.n_init === n))).filter(Boolean);
+  return (
+    <div className="panel takeaways">
+      <h2>Ce qu’il faut retenir de la simulation</h2>
+      <p className="sub">Résultats moyens sur 20 campagnes, pour les 4 faux labos et les 2 départs, soit 8 scénarios × 6 stratégies × 20 tirages.</p>
+      <div className="keys">
+        <div className="key"><span className="kn">1</span><div><b>La règle de choix change peu de chose.</b> Dans 5 scénarios sur 8, toutes les stratégies à modèle finissent à moins de 1 MPa les unes des autres. La méthode du papier n’est battue de façon solide que sur les deux faux labos GP, et de 0,06 à 0,56 MPa seulement.</div></div>
+        <div className="key"><span className="kn">2</span><div><b>Un modèle ne bat le hasard que si le paysage est lisse.</b> Sur le faux labo « GP · 32 essais », toutes les stratégies à modèle approchent l’optimum et le hasard reste à 1,9 MPa. Sur les trois autres, le hasard fait aussi bien que le papier, aux erreurs près.</div></div>
+        <div className="key"><span className="kn">3</span><div><b>Explorer n’apporte rien de mesurable.</b> GP + EI ne fait jamais mieux que le GP qui vise simplement la meilleure prédiction (aucun écart significatif sur les 8 scénarios). Le « + EI » n’est pas ce qui fait la différence.</div></div>
+      </div>
+      <div className="knobs">
+        <p><b>Ce que change le faux labo.</b> Il fixe la difficulté, pas la conclusion. Un GP donne un paysage lisse, où une bonne recette annonce ses voisines. Une forêt aléatoire ou XGBoost font de la mesure record de 35,8 MPa un pic isolé, presque impossible à retrouver : d’où des écarts de 3 à 6 MPa pour toutes les stratégies, hasard compris.</p>
+        <p><b>Ce que change le départ.</b> Avec 32 essais, on est dans la situation exacte du papier : le plan couvre déjà bien l’espace et 15 essais de plus gagnent peu, parfois presque rien. Avec 10 essais, il reste plus à chercher, mais les stratégies à modèle restent proches entre elles.</p>
+        <p className="bottom"><b>En une phrase :</b> sur ce problème, le bon plan d’expériences de départ fait l’essentiel. Avant d’attribuer un gain à l’active learning, il faut le comparer au hasard, et sur plusieurs faux labos.</p>
+      </div>
+      <div className="tscroll"><table className="scen">
+        <thead><tr><th>Faux labo</th><th>Départ</th><th>Avant les 15 essais</th><th>Hasard</th><th>Papier</th><th>Meilleure autre</th><th>Bat le papier ?</th></tr></thead>
+        <tbody>{rows.map((r) => {
+          const on = r.oracle === oracle && r.n_init === nInit;
+          const d = r.gaps.greedy_xgb - r.gaps[r.best];
+          const sig = r.p_best_vs_paper < 0.05;
+          return (
+            <tr key={`${r.oracle}-${r.n_init}`} className={on ? "on" : ""} onClick={() => onPick(r.oracle, r.n_init)} title="Afficher ce scénario">
+              <td>{ORACLE_SHORT[r.oracle]}</td><td>{r.n_init} essais</td><td>{fmt(r.start_gap)}</td>
+              <td>{fmt(r.gaps.random)}</td><td className="paper">{fmt(r.gaps.greedy_xgb)}</td>
+              <td>{fmt(r.gaps[r.best])} <span className="small">({STRAT_SHORT[r.best]})</span></td>
+              <td className={sig ? "yes" : "no"}>{sig ? `oui, de ${fmt(d, 2)} MPa` : "non, dans le bruit"}</td>
+            </tr>);
+        })}</tbody>
+      </table></div>
+      <p className="small">MPa sous l’optimum, 0 = meilleure recette trouvée. « Bat le papier ? » : test de Wilcoxon apparié sur les 20 tirages, seuil 5 %. Cliquez une ligne pour l’afficher plus bas.</p>
+    </div>
+  );
+}
+
+function scenText(r) {
+  const g = r.gaps, d = g.greedy_xgb - g[r.best];
+  const vsBest = r.p_best_vs_paper < 0.05
+    ? `${STRAT_SHORT[r.best]} fait mieux que le papier, de ${fmt(d, 2)} MPa en moyenne.`
+    : `Aucune stratégie ne bat le papier de façon solide : l’écart avec ${STRAT_SHORT[r.best]} (${fmt(d, 2)} MPa) reste dans le bruit.`;
+  const vsRand = g.random - g.greedy_xgb > 0.5 && r.p_random_vs_paper < 0.05
+    ? "Le hasard est nettement moins bon : ici, le modèle sert vraiment."
+    : "Le hasard fait presque aussi bien : ici, le modèle n’apporte pas grand-chose.";
+  return `Avant les 15 essais, la meilleure recette connue est à ${fmt(r.start_gap)} MPa de l’optimum. Après, le papier est à ${fmt(g.greedy_xgb)} MPa. ${vsBest} ${vsRand}`;
+}
 
 function Simulator() {
   const [oracle, setOracle] = useState("gp32");
@@ -363,6 +411,7 @@ function Simulator() {
   const order = Object.keys(STRAT).filter((s) => benchGap(s)).sort((x, y) => benchGap(x).gap - benchGap(y).gap);
   const paperGap = benchGap("greedy_xgb"), randomGap = benchGap("random");
   const bestModel = order.find((s) => s !== "random");
+  const scen = bench?.scenarios?.find((x) => x.oracle === oracle && x.n_init === nInit);
 
   // Staircase lines: the selected strategy and the paper in colour, the others in light grey
   const lines = Object.entries(runs).map(([s, r]) => {
@@ -421,12 +470,13 @@ function Simulator() {
           </div>
         )}
         <div className="verdict">
-          <h3>Lecture</h3>
-          <p>Toutes les stratégies qui utilisent un modèle finissent à moins de 1 MPa les unes des autres. Sur ce petit problème, c’est le bon plan de départ qui fait l’essentiel, pas la règle de choix.</p>
+          <h3>Lecture de ce scénario</h3>
+          <p>{scen ? scenText(scen) : "…"}</p>
           <p className="small" style={{ marginTop: 8, color: "#BFC8D8" }}>Limite : les faux labos sont construits à partir des 51 mesures. C’est une indication, pas une preuve.</p>
         </div>
       </aside>
       <section className="main">
+        {bench?.scenarios && <Takeaways scenarios={bench.scenarios} oracle={oracle} nInit={nInit} onPick={(o, n) => { setOracle(o); setNInit(n); }} />}
         <div className="panel">
           <h2>Combien manque-t-il pour atteindre la meilleure recette ?</h2>
           <p className="sub">Une campagne de 15 essais par stratégie, même départ et même tirage. Plus la marche descend, plus la stratégie s’approche de l’optimum ({opt ? `${fmt(opt)} MPa` : "…"}). En couleur : la méthode du papier et la stratégie choisie.</p>

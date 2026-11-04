@@ -141,4 +141,23 @@ def benchmark_summary():
     b = pd.read_csv(ROOT / "results" / "benchmark.csv"); last = b[b.n_new == 15]
     g = last.groupby(["oracle", "n_init", "strategy"]).best_true.agg(["mean", "sem"]).reset_index()
     opt = last.groupby("oracle").optimum.first().to_dict()
-    return dict(rows=g.to_dict("records"), optimum=opt)
+    return dict(rows=g.to_dict("records"), optimum=opt, scenarios=_scenarios(b))
+
+
+def _scenarios(b):
+    """One line per (fake lab, start): gap to the optimum before and after the 15 trials,
+    and whether the best other strategy beats the paper's rule (paired Wilcoxon on 20 seeds)."""
+    from scipy.stats import wilcoxon
+    out = []
+    for (o, n), d in b.groupby(["oracle", "n_init"]):
+        last = d[d.n_new == 15].pivot(index="seed", columns="strategy", values="regret")
+        m = last.mean()
+        best = m.drop(["greedy_xgb", "random"]).idxmin()
+        out.append(dict(
+            oracle=o, n_init=int(n), start_gap=float(d[d.n_new == 0].regret.mean()),
+            gaps={k: float(v) for k, v in m.items()}, best=best,
+            p_best_vs_paper=float(wilcoxon(last[best], last.greedy_xgb).pvalue),
+            p_random_vs_paper=float(wilcoxon(last.random, last.greedy_xgb).pvalue),
+            p_ei_vs_mean=float(wilcoxon(last.gp_ei, last.gp_mean).pvalue),
+        ))
+    return out

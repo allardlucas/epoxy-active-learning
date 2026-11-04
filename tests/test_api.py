@@ -67,6 +67,13 @@ def test_benchmark_summary_covers_all_strategies():
     assert set(d["optimum"]) == {"gp51", "rf51", "xgb51", "gp32"}
 
 
+def test_exploration_never_beats_mean_only_gp():
+    sc = get("/api/benchmark")["scenarios"]
+    assert len(sc) == 8
+    # GP + EI vs GP mean only: never a significant difference, on any fake lab or start
+    assert all(s["p_ei_vs_mean"] > 0.05 for s in sc)
+
+
 @pytest.mark.parametrize("url", [
     "/api/loocv?model=svm",
     "/api/replay?mwe=999",
