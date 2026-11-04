@@ -1,2 +1,9 @@
+# Runtime dependencies of the explorer app (the Docker image installs only these).
+# requirements.txt adds matplotlib (figures) and pytest (tests) for local work.
+numpy>=1.26
+pandas>=2.0
+scipy>=1.11
+scikit-learn>=1.4
+xgboost>=2.0
 fastapi>=0.110
 uvicorn>=0.29

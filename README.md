@@ -55,12 +55,12 @@ Four tabs, one per question, each with a "see the code" drawer:
 3. **Le record**: the fixed XGBoost map (a few flat plateaus) next to a GP's mean, uncertainty and probability of beating 31.9 MPa, for any resin/hardener pair.
 4. **Le simulateur**: replay a 15-trial campaign on a simulated lab with 6 strategies, plus the precomputed 20-seed benchmark.
 
-The image is large (about 3.5 GB) because it uses the full `python:3.11` image, which ships `libgomp` for XGBoost.
+The image is based on `python:3.11-slim` and installs only the runtime dependencies (`app/requirements-app.txt`): no matplotlib or pytest.
 
 Development mode, without Docker:
 
 ```bash
-pip install -r requirements.txt -r app/requirements-app.txt
+pip install -r requirements.txt -r app/requirements-app.txt   # app + figures + tests
 cd app/api && uvicorn main:app --reload --port 8000     # API
 cd app/web && npm install && npm run dev                # front end on :5173, proxies /api
 ```
