@@ -46,7 +46,7 @@ pytest -q
 
 ## Explorer app (one Docker image)
 
-**Online**: the CI publishes the app to a Hugging Face Space (free CPU) once the tests and the Docker build pass: `https://huggingface.co/spaces/<hf-user>/epoxy-explorer`. The Space sleeps after 48 h without visits and takes about a minute to wake up.
+**Online**: https://epoxy-explorer.onrender.com, on Render's free plan (`render.yaml`). Render redeploys after each push to `main` once the CI checks pass. Free instances are slow and sleep after 15 min without visits, so the first visit takes about a minute.
 
 
 An interactive version of the analysis: a React front end over a small FastAPI server that calls the same code as `src/`.

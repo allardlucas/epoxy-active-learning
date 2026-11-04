@@ -38,29 +38,3 @@ jobs:
       - name: Show logs on failure
         if: failure()
         run: docker logs app || true
-
-  # Full app (Python API included) on a Hugging Face Space, free CPU hardware.
-  # Hugging Face rebuilds the Docker image from the Dockerfile.
-  deploy-hf:
-    needs: [tests, docker]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    env:
-      HAS_TOKEN: ${{ secrets.HF_TOKEN != '' }}
-    steps:
-      - name: Skip if the Hugging Face token is missing
-        if: env.HAS_TOKEN != 'true'
-        run: echo "::warning::HF_TOKEN secret not set, skipping the deployment"
-      - uses: actions/checkout@v4
-        if: env.HAS_TOKEN == 'true'
-      - uses: actions/setup-python@v5
-        if: env.HAS_TOKEN == 'true'
-        with:
-          python-version: "3.11"
-      - name: Upload to the Space
-        if: env.HAS_TOKEN == 'true'
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: |
-          pip install "huggingface_hub>=0.24"
-          python scripts/deploy_hf_space.py

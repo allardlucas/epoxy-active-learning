@@ -28,4 +28,5 @@ COPY app/api ./app/api
 COPY --from=web /web/dist ./app/web/dist
 WORKDIR /repo/app/api
 EXPOSE 8000
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# PORT is set by hosts such as Render; 8000 otherwise.
+CMD exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}

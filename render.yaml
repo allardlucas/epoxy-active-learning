@@ -1,0 +1,16 @@
+# Render Blueprint: the explorer app on the free plan.
+# Render builds the Dockerfile and redeploys after each push to main, once the
+# GitHub checks (CI: tests + Docker build) have passed.
+services:
+  - type: web
+    name: epoxy-explorer
+    runtime: docker
+    plan: free
+    region: frankfurt
+    branch: main
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/campaign
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: OMP_NUM_THREADS
+        value: "1"
