@@ -1,5 +1,11 @@
 # Active learning on a small materials dataset: a critical reproduction
 
+[![CI](https://github.com/allardlucas/epoxy-active-learning/actions/workflows/ci.yml/badge.svg)](https://github.com/allardlucas/epoxy-active-learning/actions/workflows/ci.yml)
+
+![The explorer app, tab 3: the paper's fixed XGBoost predicts flat plateaus, while a GP gave the 35.8 MPa record a 2 % chance](docs/screenshots/app.png)
+
+*The explorer app (tab 3, "Le record"). Run it with one command: see [Explorer app](#explorer-app-one-docker-image).*
+
 Reproduction and stress-test of **Pruksawan et al., "Prediction and optimization of epoxy adhesive strength from a small dataset through active learning"**, *Sci. Technol. Adv. Mater.* 20 (2019) 1010–1021, [doi:10.1080/14686996.2019.1673670](https://doi.org/10.1080/14686996.2019.1673670).
 
 The paper designs an epoxy adhesive from **32 lab experiments**: a Graeco-Latin design, an XGBoost model, 3 "active learning" cycles of 5 experiments, then Bayesian optimization. Its best adhesive reaches **35.8 MPa** in lap shear. This repo asks three questions:
@@ -48,7 +54,7 @@ docker run --rm -p 8000:8000 epoxy-explorer
 # then open http://localhost:8000
 ```
 
-Four tabs, one per question:
+Four tabs, one per question (screenshots in `docs/screenshots/`):
 
 1. **La campagne**: the 51 trials in order, recipe by recipe; none of the 15 active-learning proposals beats trial 17.
 2. **Le R²**: LOOCV R² on all points vs on the 32 DoE points, for XGBoost, Random Forest or ElasticNet, with the paper's hyperparameters or not.
