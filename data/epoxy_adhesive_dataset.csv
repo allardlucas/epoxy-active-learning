@@ -1,0 +1,52 @@
+id,stage,MW_epoxy,MW_curing_agent,r,T_cure,sigma_ad_MPa,sigma_std_MPa,appearance
+1,initial_DoE,370,230,0.75,90,8.3,1.8,remaining uncured resin
+2,initial_DoE,370,400,1.00,170,28.8,0.7,
+3,initial_DoE,370,2000,1.25,210,1.5,0.1,Soft
+4,initial_DoE,370,4000,1.50,130,0.0,0.0,soft; no adhesion to substrates
+5,initial_DoE,1650,230,1.00,130,18.0,0.3,
+6,initial_DoE,1650,400,0.75,210,14.6,1.0,orange-colored
+7,initial_DoE,1650,2000,1.50,170,3.3,0.7,soft; sticky
+8,initial_DoE,1650,4000,1.25,90,2.0,0.1,soft; remaining uncured resin
+9,initial_DoE,2900,230,1.25,170,17.7,0.3,
+10,initial_DoE,2900,400,1.50,90,5.8,0.5,
+11,initial_DoE,2900,2000,0.75,130,5.7,0.3,
+12,initial_DoE,2900,4000,1.00,210,4.4,0.5,soft; orange-colored
+13,initial_DoE,3800,230,1.50,210,15.3,2.5,orange-colored
+14,initial_DoE,3800,400,1.25,130,10.4,0.1,
+15,initial_DoE,3800,2000,1.00,90,1.2,0.0,non-uniform; sticky
+16,initial_DoE,3800,4000,0.75,170,4.0,0.1,
+17,initial_DoE,370,230,1.50,130,31.9,0.1,
+18,initial_DoE,370,400,0.75,90,2.8,1.5,remaining uncured resin
+19,initial_DoE,370,2000,1.00,170,1.2,0.2,soft; sticky
+20,initial_DoE,370,4000,1.25,210,0.6,0.0,soft; no adhesion to substrates
+21,initial_DoE,1650,230,1.25,90,9.9,0.7,
+22,initial_DoE,1650,400,1.00,130,18.9,0.8,
+23,initial_DoE,1650,2000,0.75,210,5.9,0.7,soft; orange-colored
+24,initial_DoE,1650,4000,1.50,170,1.4,0.5,soft; no adhesion to substrates
+25,initial_DoE,2900,230,1.00,210,23.1,1.4,orange-colored
+26,initial_DoE,2900,400,1.25,170,24.6,0.5,
+27,initial_DoE,2900,2000,1.50,90,4.4,0.1,soft; remaining uncured resin
+28,initial_DoE,2900,4000,0.75,130,2.0,0.6,
+29,initial_DoE,3800,230,0.75,170,15.5,0.2,
+30,initial_DoE,3800,400,1.50,210,28.9,0.6,orange-colored
+31,initial_DoE,3800,2000,1.25,130,13.5,0.7,soft; sticky
+32,initial_DoE,3800,4000,1.00,90,0.0,0.0,soft; no adhesion to substrates
+33,active_learning,2900,400,1.00,210,24.0,1.1,
+34,active_learning,3800,400,1.00,210,21.2,1.2,
+35,active_learning,370,400,1.00,210,29.0,0.1,orange-colored
+36,active_learning,1650,400,1.00,170,22.4,1.7,
+37,active_learning,1650,400,1.00,210,27.3,1.6,
+38,active_learning,370,400,1.25,210,27.8,0.5,dark-colored
+39,active_learning,370,400,1.25,170,28.3,0.9,
+40,active_learning,370,400,1.50,210,23.1,0.4,dark-colored
+41,active_learning,370,400,1.50,170,22.4,1.8,
+42,active_learning,1650,400,1.25,210,24.6,0.0,orange-colored
+43,active_learning,2900,400,1.00,170,20.5,3.5,
+44,active_learning,370,230,1.00,210,24.6,2.0,dark-colored
+45,active_learning,370,230,1.00,170,27.9,0.2,
+46,active_learning,1650,400,1.25,170,23.5,1.0,
+47,active_learning,2900,400,1.25,210,25.7,0.9,orange-colored
+48,bayesian_opt,370,400,1.11,199,28.0,0.7,
+49,bayesian_opt,370,400,1.24,194,27.4,1.2,
+50,bayesian_opt,370,400,1.30,191,18.8,1.4,
+51,bayesian_opt,370,400,0.89,209,35.8,1.1,
