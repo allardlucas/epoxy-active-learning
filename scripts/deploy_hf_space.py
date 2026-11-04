@@ -41,7 +41,10 @@ active learning*. Code, data and method: [{GITHUB}]({GITHUB}).
 def main():
     api = HfApi(token=os.environ["HF_TOKEN"])
     repo_id = f"{api.whoami()['name']}/{SPACE_NAME}"
-    api.create_repo(repo_id, repo_type="space", space_sdk="docker", exist_ok=True)
+    if not api.repo_exists(repo_id, repo_type="space"):
+        # Creating a Space can be refused (HTTP 402) on some free accounts: create it
+        # once by hand at https://huggingface.co/new-space (SDK Docker, CPU basic).
+        api.create_repo(repo_id, repo_type="space", space_sdk="docker")
     sha = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT,
                          capture_output=True, text=True).stdout.strip() or "local"
     with tempfile.TemporaryDirectory() as tmp:
