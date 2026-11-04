@@ -244,7 +244,7 @@ function Replay() {
   const [mwc, setMwc] = useState(400);
   const [right, setRight] = useState("p_beat");
   const [d, err] = useApi(`/api/replay?mwe=${mwe}&mwc=${mwc}`);
-  const RIGHT = { p_beat: "Chance de battre 31,9", gp_mean: "Prédiction du GP", gp_sd: "Incertitude du GP" };
+  const RIGHT = { p_beat: "Chance de battre 31,9", gp_mean: "Prédiction du GP" };
   const heat = (z, title, colorscale, zmin, zmax, fmtStr) => ({
     type: "heatmap", x: d.r, y: d.T, z, colorscale, zmin, zmax, colorbar: { title: { text: title, side: "right" }, thickness: 12 },
     hovertemplate: `r = %{x}<br>T = %{y} °C<br>${title} : %{z:${fmtStr}}<extra></extra>`,
@@ -301,11 +301,10 @@ function Replay() {
               </div>
               <div className="panel">
                 <h2>{RIGHT[right]} · GP sur les mêmes 47 essais</h2>
-                <p className="sub">{right === "p_beat" ? "Probabilité que la vraie résistance dépasse 31,9 MPa." : right === "gp_sd" ? "Écart-type de la prédiction, en MPa." : "Prédiction continue, en MPa."}</p>
+                <p className="sub">{right === "p_beat" ? "Probabilité que la vraie résistance dépasse 31,9 MPa." : "Prédiction continue, en MPa."}</p>
                 <Plot config={cfg} useResizeHandler style={{ width: "100%", height: 400 }}
                   data={[right === "p_beat" ? heat(d.p_beat, "P(> 31,9)", "Magma", 0, 0.5, ".0%")
-                    : right === "gp_sd" ? heat(d.gp_sd, "MPa", "Blues", 0, 8, ".1f")
-                      : heat(d.gp_mean, "MPa", "Viridis", 0, 32, ".1f"), boTrace]}
+                    : heat(d.gp_mean, "MPa", "Viridis", 0, 32, ".1f"), boTrace]}
                   layout={baseLayout({ xaxis: { title: "ratio r" }, yaxis: { title: "cuisson (°C)" } })} />
               </div>
             </div>
