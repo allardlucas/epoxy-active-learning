@@ -330,7 +330,7 @@ function Replay() {
 /* ------------------------------------------------------------------ 4. Simulator */
 const STRAT_SHORT = { random: "Hasard", greedy_xgb: "Papier", greedy_rf: "Top 5 RF", gp_mean: "GP moyenne", gp_ei: "GP + EI", gp_ucb: "GP + UCB" };
 
-function Takeaways({ scenarios, oracle, nInit, onPick }) {
+function Takeaways({ scenarios, headroom, oracle, nInit, onPick }) {
   const rows = ["gp32", "gp51", "rf51", "xgb51"].flatMap((o) => [32, 10].map((n) => scenarios.find((s) => s.oracle === o && s.n_init === n))).filter(Boolean);
   return (
     <div className="panel takeaways">
@@ -377,6 +377,22 @@ function Takeaways({ scenarios, oracle, nInit, onPick }) {
         })}</tbody>
       </table></div>
       <p className="small">Cliquez une ligne pour afficher ce scénario dans les réglages et la campagne en exemple.</p>
+      {headroom.length > 0 && (
+        <details className="fold why">
+          <summary><b>Pourquoi le hasard fait-il presque aussi bien ?</b></summary>
+          <p>Le hasard tire, à chaque lot, 5 recettes au sort parmi les 3 296 jamais testées (les 3 328 recettes possibles moins les 32 du plan), sans modèle. Pour qu’il fasse mieux que le plan, il suffit qu’il tombe sur une recette meilleure que le meilleur essai du plan. Or il y en a très peu :</p>
+          <div className="tscroll"><table className="scen">
+            <thead><tr><th>Faux labo</th><th>Meilleur essai<br />du plan</th><th>Meilleure recette<br />possible</th><th>Recettes meilleures<br />que le plan</th><th>Chance que 15 tirages<br />au hasard en touchent une</th></tr></thead>
+            <tbody>{headroom.map((h) => (
+              <tr key={h.oracle} className={h.oracle === oracle ? "on" : ""}>
+                <td>{ORACLE[h.oracle].replace("Random Forest", "Forêt aléatoire")}</td><td>{fmt(h.plan_best)} MPa</td><td>{fmt(h.optimum)} MPa</td>
+                <td><b>{h.n_better}</b> sur {h.n_candidates.toLocaleString("fr-FR")} <span className="small">({fmt(100 * h.share_better)} %)</span></td>
+                <td>{Math.round(100 * h.p_random_hits)} %</td>
+              </tr>))}</tbody>
+          </table></div>
+          <p>Le plan de 32 essais a donc déjà trouvé une recette parmi les meilleures 0,4 à 3 %. Il ne reste qu’une poignée de recettes meilleures, et avec ± 2 MPa de bruit par essai, un modèle appris sur 32 mesures ne sait pas mieux que le hasard où elles se trouvent, sauf quand le paysage est lisse (faux labo « GP · 32 essais »). Sur « GP · 51 mesures », il n’y en a que 14 : ni le hasard ni le papier ne les trouvent, d’où un gain de 0,0.</p>
+        </details>
+      )}
       <p className="small">Limite : les faux labos sont construits à partir des 51 mesures. C’est une indication, pas une preuve.</p>
     </div>
   );
@@ -487,7 +503,7 @@ function Simulator() {
         )}
       </aside>
       <section className="main">
-        {bench?.scenarios && <Takeaways scenarios={bench.scenarios} oracle={oracle} nInit={nInit} onPick={(o, n) => { setOracle(o); setNInit(n); }} />}
+        {bench?.scenarios && <Takeaways scenarios={bench.scenarios} headroom={bench.headroom || []} oracle={oracle} nInit={nInit} onPick={(o, n) => { setOracle(o); setNInit(n); }} />}
         <div className="panel">
           <h2>Une campagne en exemple : combien manque-t-il pour atteindre la meilleure recette ?</h2>
           <p className="sub">Une seule campagne de 15 essais par stratégie, même départ et même tirage. Cliquez « Rejouer avec un autre tirage » : le classement change d’une campagne à l’autre, d’où les moyennes sur 20 campagnes plus haut. Plus la marche descend, plus la stratégie s’approche de l’optimum ({opt ? `${fmt(opt)} MPa` : "…"}). En couleur : la méthode du papier et la stratégie choisie.</p>

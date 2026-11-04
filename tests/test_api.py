@@ -82,3 +82,11 @@ def test_exploration_never_beats_mean_only_gp():
 ])
 def test_bad_parameters_are_rejected(url):
     get(url, status=400)
+
+
+def test_few_recipes_beat_the_plan():
+    h = {r["oracle"]: r for r in get("/api/benchmark")["headroom"]}
+    assert set(h) == {"gp51", "gp32", "rf51", "xgb51"}
+    # the 32-trial plan already sits in the top few percent of every fake lab
+    assert all(r["share_better"] < 0.05 for r in h.values())
+    assert h["gp51"]["n_better"] < 30
