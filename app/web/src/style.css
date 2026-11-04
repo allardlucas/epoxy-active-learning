@@ -91,3 +91,8 @@ table.scen td.yes { color: var(--navy); font-weight: 600; }
 table.scen td.no { color: var(--ink2, #6B7385); }
 @media (max-width: 900px) { .keys { grid-template-columns: 1fr; } }
 .tscroll { overflow-x: auto; }
+.retenir { margin: 4px 0 0 18px; padding: 0; }
+.retenir li { margin: 6px 0; line-height: 1.45; }
+.help-pop { text-transform: none; letter-spacing: normal; font-weight: 400; }
+.stat .help-pop, .card h3 .help-pop { left: auto; right: -8px; top: 26px; transform: none; width: 260px; }
+table.scen td, table.scen th { white-space: nowrap; }

@@ -329,7 +329,6 @@ function Replay() {
 
 /* ------------------------------------------------------------------ 4. Simulator */
 const STRAT_SHORT = { random: "Hasard", greedy_xgb: "Papier", greedy_rf: "Top 5 RF", gp_mean: "GP moyenne", gp_ei: "GP + EI", gp_ucb: "GP + UCB" };
-const ORACLE_SHORT = { gp32: "GP · 32 essais initiaux", gp51: "GP · 51 mesures", rf51: "Random Forest · 51 mesures", xgb51: "XGBoost · 51 mesures" };
 
 function Takeaways({ scenarios, oracle, nInit, onPick }) {
   const rows = ["gp32", "gp51", "rf51", "xgb51"].flatMap((o) => [32, 10].map((n) => scenarios.find((s) => s.oracle === o && s.n_init === n))).filter(Boolean);
@@ -348,21 +347,22 @@ function Takeaways({ scenarios, oracle, nInit, onPick }) {
         <p className="bottom"><b>En une phrase :</b> sur ce problème, le bon plan d’expériences de départ fait l’essentiel. Avant d’attribuer un gain à l’active learning, il faut le comparer au hasard, et sur plusieurs faux labos.</p>
       </div>
       <div className="tscroll"><table className="scen">
-        <thead><tr><th>Faux labo</th><th>Départ</th><th>Avant les 15 essais</th><th>Hasard</th><th>Papier</th><th>Meilleure autre</th><th>Bat le papier ?</th></tr></thead>
+        <thead><tr><th>Faux labo</th><th>Départ<br /><span className="small">essais</span></th><th>Avant les<br />15 essais</th><th>Hasard</th><th>Papier</th><th>Gagné en 15 essais<br /><span className="small">papier · hasard</span></th><th>Meilleure autre</th><th>Bat le papier ?</th></tr></thead>
         <tbody>{rows.map((r) => {
           const on = r.oracle === oracle && r.n_init === nInit;
           const d = r.gaps.greedy_xgb - r.gaps[r.best];
           const sig = r.p_best_vs_paper < 0.05;
           return (
             <tr key={`${r.oracle}-${r.n_init}`} className={on ? "on" : ""} onClick={() => onPick(r.oracle, r.n_init)} title="Afficher ce scénario">
-              <td>{ORACLE_SHORT[r.oracle]}</td><td>{r.n_init} essais</td><td>{fmt(r.start_gap)}</td>
+              <td>{ORACLE[r.oracle].replace("Random Forest", "Forêt aléatoire")}</td><td>{r.n_init}</td><td>{fmt(r.start_gap)}</td>
               <td>{fmt(r.gaps.random)}</td><td className="paper">{fmt(r.gaps.greedy_xgb)}</td>
-              <td>{fmt(r.gaps[r.best])} <span className="small">({STRAT_SHORT[r.best]})</span></td>
-              <td className={sig ? "yes" : "no"}>{sig ? `oui, de ${fmt(d, 2)} MPa` : "non, dans le bruit"}</td>
+              <td><b>{fmt(r.start_gap - r.gaps.greedy_xgb)}</b> <span className="small">· {fmt(r.start_gap - r.gaps.random)}</span></td>
+              <td>{fmt(r.gaps[r.best])} <span className="small">{STRAT_SHORT[r.best]}</span></td>
+              <td className={sig ? "yes" : "no"}>{sig ? `oui, de ${fmt(d, 2)}` : "non"}</td>
             </tr>);
         })}</tbody>
       </table></div>
-      <p className="small">MPa sous l’optimum, 0 = meilleure recette trouvée. « Bat le papier ? » : test de Wilcoxon apparié sur les 20 tirages, seuil 5 %. Cliquez une ligne pour l’afficher plus bas.</p>
+      <p className="small">MPa sous l’optimum, 0 = meilleure recette trouvée. « Gagné en 15 essais » : écart avant moins écart après, pour le papier puis pour le hasard. « Bat le papier ? » : la meilleure autre stratégie fait-elle mieux que le papier (test de Wilcoxon apparié sur les 20 tirages, seuil 5 %) ? Si oui, de combien de MPa. Cliquez une ligne pour l’afficher plus bas.</p>
     </div>
   );
 }
@@ -375,7 +375,8 @@ function scenText(r) {
   const vsRand = g.random - g.greedy_xgb > 0.5 && r.p_random_vs_paper < 0.05
     ? "Le hasard est nettement moins bon : ici, le modèle sert vraiment."
     : "Le hasard fait presque aussi bien : ici, le modèle n’apporte pas grand-chose.";
-  return `Avant les 15 essais, la meilleure recette connue est à ${fmt(r.start_gap)} MPa de l’optimum. Après, le papier est à ${fmt(g.greedy_xgb)} MPa. ${vsBest} ${vsRand}`;
+  const gain = r.start_gap - g.greedy_xgb;
+  return `Les 15 essais du papier font gagner ${fmt(gain)} MPa. ${vsBest} ${vsRand}`;
 }
 
 function Simulator() {
@@ -461,17 +462,23 @@ function Simulator() {
           </label>
           <button className="go" disabled={busy} onClick={() => setSeed((seed + 1) % 100)}>{busy ? "Campagnes en cours…" : "Rejouer avec un autre tirage"}</button>
         </div>
-        {paperGap && randomGap && (
+        {paperGap && randomGap && scen && (
           <div className="card">
-            <h3>Sur 20 campagnes</h3>
-            <div className="stat"><span className="num">{fmt(paperGap.gap)}</span><span>MPa sous l’optimum pour la méthode du papier</span></div>
-            <div className="stat"><span className="num">{fmt(benchGap(bestModel).gap)}</span><span>MPa pour la meilleure stratégie à modèle ({STRAT_SHORT[bestModel]})</span></div>
-            <div className="stat"><span className="num">{fmt(randomGap.gap)}</span><span>MPa en choisissant au hasard</span></div>
+            <h3>Ce scénario, sur 20 campagnes <Help>Les 3 lots de 5 essais sont rejoués 20 fois, avec 20 tirages différents du bruit de mesure (et, avec 10 essais, du départ). Une seule campagne peut avoir de la chance ou pas : la moyenne de 20 dit ce qu’on peut attendre d’une stratégie. Tous les chiffres sont en MPa sous la meilleure recette possible, 0 = trouvée.</Help></h3>
+            <div className="stat"><span className="num">{fmt(scen.start_gap)}</span><span>avant les 15 essais <Help>L’écart entre la meilleure recette du départ et la meilleure recette possible. C’est le point de départ commun à toutes les stratégies.</Help></span></div>
+            <div className="stat"><span className="num">{fmt(paperGap.gap)}</span><span>après 15 essais, avec la méthode du papier <Help>La règle du papier : à chaque lot, tester les 5 recettes que XGBoost prédit les meilleures. La différence avec la ligne du dessus, c’est ce que les 15 essais ont fait gagner.</Help></span></div>
+            <div className="stat"><span className="num">{fmt(benchGap(bestModel).gap)}</span><span>avec la meilleure autre stratégie ({STRAT_SHORT[bestModel]}) <Help>La meilleure des 4 autres stratégies à modèle sur ce scénario. Si l’écart avec le papier est petit, ou pas significatif, changer de règle de choix n’aurait rien changé.</Help></span></div>
+            <div className="stat"><span className="num">{fmt(randomGap.gap)}</span><span>en choisissant au hasard <Help>15 recettes tirées au sort, sans modèle. C’est la référence : si une stratégie à modèle ne fait pas nettement mieux, le modèle n’apporte rien ici.</Help></span></div>
+            <p className="small" style={{ marginTop: 8 }}>{scenText(scen)}</p>
           </div>
         )}
         <div className="verdict">
-          <h3>Lecture de ce scénario</h3>
-          <p>{scen ? scenText(scen) : "…"}</p>
+          <h3>À retenir</h3>
+          <ul className="retenir">
+            <li>Sauf sur un paysage lisse, les 15 essais rapportent peu (0 à 1,4 MPa), et le hasard en gagne autant : le plan de départ fait l’essentiel.</li>
+            <li>Un modèle ne bat le hasard que si le paysage est lisse (faux labo GP · 32 essais).</li>
+            <li>La règle de choix change moins de 1 MPa le plus souvent, et explorer (EI) n’apporte rien.</li>
+          </ul>
           <p className="small" style={{ marginTop: 8, color: "#BFC8D8" }}>Limite : les faux labos sont construits à partir des 51 mesures. C’est une indication, pas une preuve.</p>
         </div>
       </aside>
