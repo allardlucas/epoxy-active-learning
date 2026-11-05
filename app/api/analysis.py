@@ -141,4 +141,40 @@ def benchmark_summary():
     b = pd.read_csv(ROOT / "results" / "benchmark.csv"); last = b[b.n_new == 15]
     g = last.groupby(["oracle", "n_init", "strategy"]).best_true.agg(["mean", "sem"]).reset_index()
     opt = last.groupby("oracle").optimum.first().to_dict()
-    return dict(rows=g.to_dict("records"), optimum=opt)
+    return dict(rows=g.to_dict("records"), optimum=opt, scenarios=_scenarios(b), headroom=_headroom())
+
+
+@lru_cache
+def _headroom(k=15):
+    """Per fake lab: how many untested recipes beat the best trial of the 32-trial plan,
+    and the chance that k recipes drawn at random include at least one of them."""
+    df = load()
+    doe = df[df.stage == "initial_DoE"][FEATURES].values
+    doe_idx = sorted({int(np.argmin(np.abs(GRID - row).sum(1))) for row in doe})
+    out = []
+    for o in ("gp51", "gp32", "rf51", "xgb51"):
+        t = _lab(o).truth; best = float(t[doe_idx].max())
+        n_cand = len(t) - len(doe_idx); n_better = int((t > best).sum())
+        p_miss = np.prod([(n_cand - n_better - i) / (n_cand - i) for i in range(k)])
+        out.append(dict(oracle=o, plan_best=best, optimum=float(t.max()), n_candidates=n_cand,
+                        n_better=n_better, share_better=n_better / n_cand, p_random_hits=float(1 - p_miss)))
+    return out
+
+
+def _scenarios(b):
+    """One line per (fake lab, start): gap to the optimum before and after the 15 trials,
+    and whether the best other strategy beats the paper's rule (paired Wilcoxon on 20 seeds)."""
+    from scipy.stats import wilcoxon
+    out = []
+    for (o, n), d in b.groupby(["oracle", "n_init"]):
+        last = d[d.n_new == 15].pivot(index="seed", columns="strategy", values="regret")
+        m = last.mean()
+        best = m.drop(["greedy_xgb", "random"]).idxmin()
+        out.append(dict(
+            oracle=o, n_init=int(n), start_gap=float(d[d.n_new == 0].regret.mean()),
+            gaps={k: float(v) for k, v in m.items()}, best=best,
+            p_best_vs_paper=float(wilcoxon(last[best], last.greedy_xgb).pvalue),
+            p_random_vs_paper=float(wilcoxon(last.random, last.greedy_xgb).pvalue),
+            p_ei_vs_mean=float(wilcoxon(last.gp_ei, last.gp_mean).pvalue),
+        ))
+    return out

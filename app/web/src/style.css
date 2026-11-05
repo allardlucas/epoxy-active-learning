@@ -76,3 +76,38 @@ th { color: var(--ink-2); font-weight: 600; }
 .help:hover .help-pop, .help:focus .help-pop, .help:focus-within .help-pop { display: block; }
 @media (max-width: 900px) { .help-pop { left: auto; right: -8px; top: 26px; transform: none; width: 260px; } }
 .lab { display: inline-flex; align-items: center; gap: 0; }
+.takeaways { border: 2px solid var(--navy); }
+.keys { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 10px 0 12px; }
+.key { display: flex; gap: 10px; background: var(--cream); border-radius: 10px; padding: 12px; font-size: 14px; line-height: 1.45; }
+.key .kn { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--navy); color: var(--cream); display: grid; place-items: center; font-weight: 700; font-size: 13px; }
+.knobs { font-size: 14px; line-height: 1.5; margin-bottom: 12px; }
+.knobs p { margin: 6px 0; }
+.knobs .bottom { background: var(--navy); color: var(--cream); border-radius: 10px; padding: 10px 12px; margin-top: 10px; }
+table.scen tbody tr { cursor: pointer; }
+table.scen tbody tr:hover { background: var(--cream); }
+table.scen tbody tr.on { background: #FCE9D9; font-weight: 600; }
+table.scen td.paper { color: var(--orange); font-weight: 600; }
+table.scen td.yes { color: var(--navy); font-weight: 600; }
+table.scen td.no { color: var(--ink2, #6B7385); }
+@media (max-width: 900px) { .keys { grid-template-columns: 1fr; } }
+.tscroll { overflow-x: auto; }
+.retenir { margin: 4px 0 0 18px; padding: 0; }
+.retenir li { margin: 6px 0; line-height: 1.45; }
+.help-pop { text-transform: none; letter-spacing: normal; font-weight: 400; }
+.stat .help-pop, .card h3 .help-pop { left: auto; right: -8px; top: 26px; transform: none; width: 260px; }
+table.scen td, table.scen th { white-space: nowrap; }
+details.fold summary { cursor: pointer; list-style: revert; }
+details.fold summary h2 { display: inline; }
+details.fold[open] summary { margin-bottom: 8px; }
+.takeaways h3.tt { font-size: 17px; margin: 18px 0 6px; }
+.howto { background: var(--cream); border-radius: 10px; padding: 12px 14px; font-size: 14px; line-height: 1.5; margin-bottom: 10px; }
+.howto p { margin: 0 0 8px; }
+.howto dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0 0 8px; }
+.howto dt { font-weight: 600; }
+.howto dd { margin: 0; }
+.howto .ex { border-left: 3px solid var(--orange); padding-left: 10px; margin: 0; }
+table.scen tr.grp th { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--orange); border-bottom: 0; padding-bottom: 0; }
+@media (max-width: 700px) { .howto dl { grid-template-columns: 1fr; } }
+details.why { margin-top: 12px; background: var(--cream); border-radius: 10px; padding: 10px 14px; font-size: 14px; line-height: 1.5; }
+details.why p { margin: 8px 0; }
+details.why table.scen tbody tr { cursor: default; }

@@ -67,6 +67,13 @@ def test_benchmark_summary_covers_all_strategies():
     assert set(d["optimum"]) == {"gp51", "rf51", "xgb51", "gp32"}
 
 
+def test_exploration_never_beats_mean_only_gp():
+    sc = get("/api/benchmark")["scenarios"]
+    assert len(sc) == 8
+    # GP + EI vs GP mean only: never a significant difference, on any fake lab or start
+    assert all(s["p_ei_vs_mean"] > 0.05 for s in sc)
+
+
 @pytest.mark.parametrize("url", [
     "/api/loocv?model=svm",
     "/api/replay?mwe=999",
@@ -75,3 +82,11 @@ def test_benchmark_summary_covers_all_strategies():
 ])
 def test_bad_parameters_are_rejected(url):
     get(url, status=400)
+
+
+def test_few_recipes_beat_the_plan():
+    h = {r["oracle"]: r for r in get("/api/benchmark")["headroom"]}
+    assert set(h) == {"gp51", "gp32", "rf51", "xgb51"}
+    # the 32-trial plan already sits in the top few percent of every fake lab
+    assert all(r["share_better"] < 0.05 for r in h.values())
+    assert h["gp51"]["n_better"] < 30

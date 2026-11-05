@@ -62,7 +62,7 @@ Four tabs, one per question (screenshots in `docs/screenshots/`):
 1. **La campagne**: the 51 trials in order, recipe by recipe; none of the 15 active-learning proposals beats trial 17.
 2. **Le R²**: LOOCV R² on all points vs on the 32 DoE points, for XGBoost, Random Forest or ElasticNet, with the paper's hyperparameters or not.
 3. **Le record**: the fixed XGBoost map (a few flat plateaus) next to a GP's mean, uncertainty and probability of beating 31.9 MPa, for any resin/hardener pair.
-4. **Le simulateur**: replay a 15-trial campaign on a simulated lab with 6 strategies, plus the precomputed 20-seed benchmark.
+4. **Le simulateur**: what to conclude first (3 takeaways and a clickable table of the 8 scenarios, 4 simulated labs × 2 initial designs, with paired Wilcoxon tests against the paper), then one example campaign with 6 strategies, and a folded explanation of why random search does almost as well (the 32-trial design is already in the top 0.4–3 % of recipes).
 
 The image is based on `python:3.11-slim` and installs only the runtime dependencies (`app/requirements-app.txt`): no matplotlib or pytest.
 
